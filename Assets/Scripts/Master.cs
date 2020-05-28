@@ -55,7 +55,7 @@ public class Master : MonoBehaviour
     void Update()
     {
         now = Time.time;
-        if(connected)
+        if (connected)
         {
             player.GetComponent<Player>().Setup(ip);
             opponent.GetComponent<Opponent>().Setup(ip);
@@ -79,7 +79,8 @@ public class Master : MonoBehaviour
         while (true)
         {
             shake = BitConverter.GetBytes(now);
-            sw.Start();
+            
+            sw.Restart();
             udp.Send(shake, 4);
             shake2 = udp.Receive(ref ip);
             sw.Stop();
@@ -87,8 +88,7 @@ public class Master : MonoBehaviour
             time = sw.ElapsedMilliseconds;
             ping = time / 2000.0f;
             timeDiff =now - BitConverter.ToSingle(shake2, 0);
-            Debug = ping.ToString();
-            Debug2 = timeDiff.ToString();
+            Debug = BitConverter.ToSingle(shake2, 0).ToString();
         }
     }
     void Client()
@@ -98,10 +98,9 @@ public class Master : MonoBehaviour
         clientSock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.IP);
         clientSock.Connect(new IPEndPoint(IPAddress.Loopback, 11450));
         clientSock.Receive(msg);
-        //  udp = new UdpClient(11445);
-        //  udp.Connect(((IPEndPoint)transferSock.RemoteEndPoint).Address, 11445);
-        //   connected = true;
-      //  udp.Connect(ip.Address, 11445);
+        /*udp = new UdpClient(11445);
+        connected = true;
+        udp.Connect(ip.Address, 11445);
         while (true)
         {
             shake = BitConverter.GetBytes(now);
@@ -113,6 +112,6 @@ public class Master : MonoBehaviour
             time = sw.ElapsedMilliseconds;
             ping = time / 2000.0f;
             timeDiff = now - BitConverter.ToSingle(shake2, 0);
-        }
+        }*/
     }
 }

@@ -7,6 +7,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq.Expressions;
+using System.Security.Cryptography;
 
 public class Opponent : MonoBehaviour
 {
@@ -39,6 +40,7 @@ public class Opponent : MonoBehaviour
     IPEndPoint IP;
     UdpClient udp;
     public byte[] msg;
+    public byte[] msg2;
 
     public String debug;
 
@@ -74,7 +76,7 @@ public class Opponent : MonoBehaviour
         Cool = new float[20];
         udp = new UdpClient(11449);
         connected = false;
-        flashable = true;
+        flashable = false;
         e = false;
         r = 0;
         V[0] = 3.25f;
@@ -110,6 +112,7 @@ public class Opponent : MonoBehaviour
         C[12] = 10;
         C[13] = 0.25f;
         msg = new byte[21];
+        msg2 = new byte[21];
     }
 
 
@@ -123,12 +126,10 @@ public class Opponent : MonoBehaviour
 
     void Update()
     {
+        if (flashable)
+            flash();
         ping = Master.ping;
         timeDiff = Master.timeDiff;
-        if (connected && Input.GetKeyDown(KeyCode.X))
-        {
-            flashable = true;
-        }
         Cool[14] -= Time.deltaTime;
         Cool[15] -= Time.deltaTime;
         casting -= Time.deltaTime;
@@ -173,26 +174,26 @@ public class Opponent : MonoBehaviour
                     rq = true;
                     break;
                 case 25:
-                    Invoke("traceA", 0.25f-ping);
+                    Invoke("traceA", 0.25f - ping);
                     target = true;
                     break;
                 case 26:
-                    Invoke("trace6", 0.25f-ping);
+                    Invoke("trace6", 0.25f - ping);
                     target = true;
                     break;
                 case 30:
-                    Debug.Log("e" + Time.time.ToString());
-                    Invoke("traceA2", 0.25f-ping);
+                    Invoke("traceA2", 0.25f - ping);
                     target = true;
                     break;
                 case 31:
-                    Invoke("trace12", 0.25f-ping);
+                    Invoke("trace12", 0.25f - ping);
                     target = true;
                     break;
                 case 55:
                     etracersA1.SetActive(false);
                     continue;
                 case 56:
+                    debug = "yes";  
                     etracers6.SetActive(false);
                     continue;
                 case 60:
@@ -209,7 +210,7 @@ public class Opponent : MonoBehaviour
                 T[x] = BitConverter.ToSingle(msg, 17);
             }
             else
-                T[x-=20] = BitConverter.ToSingle(msg, 1)+timeDiff+ping;
+                T[x -= 20] = BitConverter.ToSingle(msg, 1) + timeDiff;
             D[0] = Vector2.zero;
             casting = C[x];
             D[x] = E[x] - S[x];
@@ -220,22 +221,22 @@ public class Opponent : MonoBehaviour
             switch (task.Peek()[0])
             {
                 case 25:
-                    Invoke("traceA", 0.25f-ping);
+                    Invoke("traceA", 0.25f - ping);
                     task.Dequeue();
                     target = true;
                     break;
                 case 26:
-                    Invoke("trace6", 0.25f-ping);
+                    Invoke("trace6", 0.25f - ping);
                     task.Dequeue();
                     target = true;
                     break;
                 case 30:
-                    Invoke("traceA2", 0.25f-ping);
+                    Invoke("traceA2", 0.25f - ping);
                     task.Dequeue();
                     target = true;
                     break;
                 case 31:
-                    Invoke("trace12", 0.25f-ping);
+                    Invoke("trace12", 0.25f - ping);
                     task.Dequeue();
                     target = true;
                     break;
@@ -367,6 +368,40 @@ public class Opponent : MonoBehaviour
         }
         else
             skills[13].gameObject.SetActive(false);
+        if (flashable)
+            flash();
+    }
+    void flash()
+    {
+        flashable = false;
+
+        D[0] = Vector2.zero;
+        D[7] = Vector2.zero;
+        S[5] = new Vector2(-BitConverter.ToSingle(msg2, 1), -BitConverter.ToSingle(msg2, 5));
+        E[5] = new Vector2(-BitConverter.ToSingle(msg2, 9), -BitConverter.ToSingle(msg2, 13));
+        D[5] = E[5] - S[5];
+        R[5] = D[5] / D[5].magnitude;
+        Debug.Log(msg2[0]);
+        task.Clear();
+        if (w || rw)
+            casting = 0;
+        a = a2 = rw = w = false;
+        if (Vector2.Distance(S[5], E[5]) < 4)
+            transform.position = E[5];
+        else
+            transform.position = S[5] + R[5] * 4;
+        debug = S[5].ToString();
+        Move(1);
+        Move(2);
+        Move(3);
+        Move(8);
+        Move(13);
+    }
+    void Move(int x)
+    {
+        S[x] = transform.position;
+        D[x] = E[x] - S[x];
+        R[x] = D[x] / D[x].magnitude;
     }
     void traceA()
     {
@@ -390,7 +425,17 @@ public class Opponent : MonoBehaviour
     }
     void Receive()
     {
+        byte[] msg = new byte[21];
         while (true)
-            task.Enqueue(udp.Receive(ref IP));
+        {
+            msg = udp.Receive(ref IP);
+            if (msg[0] == 44)
+            {
+                msg2 = msg;
+                flashable = true;
+            }
+            else
+                task.Enqueue(msg);
+        }
     }
 }

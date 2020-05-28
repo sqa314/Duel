@@ -73,17 +73,16 @@ public class Player : MonoBehaviour
         e = false;
         character = 0;
         r = 0;
-        V[0] = 3.25f;
-        V[1] = 20;
-        V[2] = 20;
-        V[4] = 15;
-        V[6] = 22.5f;
-        V[7] = 14.5f;
-        V[8] = 17.5f;
-        V[11] = 22.5f;
-        V[12] = 14.5f;
-        V[13] = 17.5f;
-
+            V[0] = 3.25f;
+            V[1] = 20;
+            V[2] = 20;
+            V[4] = 15;
+            V[6] = 22.5f;
+            V[7] = 14.5f;
+            V[8] = 17.5f;
+            V[11] = 22.5f;
+            V[12] = 14.5f;
+            V[13] = 17.5f;
         W[1] = 4.5f;
         W[2] = 12;
         W[3] = 15;
@@ -173,12 +172,21 @@ public class Player : MonoBehaviour
         }
         if (connected && flashable && Input.GetKeyDown(KeyCode.F))//f
         {
+            float[] piece = new float[4];
+            byte[] msg = new byte[21];
             flashable = false;
             q = rq = a =a2 = false;
             D[0] = Vector2.zero;
             D[7] = Vector2.zero;
             S[5] = transform.position;
             E[5] = cam.ScreenToWorldPoint(new Vector2(Input.mousePosition.x, Input.mousePosition.y));
+            msg[0] = 44;
+            piece[0] = S[5].x;
+            piece[1] = S[5].y;
+            piece[2] = E[5].x;
+            piece[3] = E[5].y;
+            Buffer.BlockCopy(piece, 0, msg, 1, 16);
+            udp.Send(msg, 21);
             D[5] = E[5] - S[5];
             R[5] = D[5] / D[5].magnitude;
             task.Clear();
@@ -246,7 +254,6 @@ public class Player : MonoBehaviour
             D[0] = Vector2.zero;
             if (Cool[5] <= 0)
             {
-                Debug.Log(Cool[5]);
                 Cool[5] = 1.6f;
                 byte[] msg = new byte[5];
                 msg[0] = 25;
@@ -380,6 +387,7 @@ public class Player : MonoBehaviour
     }
     void traceA()
     {
+        Debug.Log("p" + Time.time.ToString());
         tracersA1.gameObject.SetActive(true);
         tracersA1.gameObject.GetComponent<Tracer>().trace();
     }
