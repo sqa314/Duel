@@ -4,7 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using System.Diagnostics;
+using System.Net.NetworkInformation;
 
 // connected = 연결확인; S = 출발위치; E = 목표위치; D= 목표 방향; R= 목표각도; skills = 자식오브젝트; cloneTask = 전송; task = 대기열; T = 사용 시간; V = 속도 ;C = 캐스팅 시간; W = 재사용 대기시간;
 
@@ -71,7 +71,7 @@ public class Player : MonoBehaviour
         connected = false;
         flashable = true;
         e = false;
-        character = 5;
+        character = 0;
         r = 0;
         V[0] = 3.25f;
         V[1] = 20;
@@ -98,12 +98,12 @@ public class Player : MonoBehaviour
         C[2] = 0.25f;
         C[3] = 0.25f;
         C[4] = 1;
-        C[5] = 0.1f;
+        C[5] = 0.25f;
         C[6] = 0.25f;
         C[7] = 10;
         C[8] = 0.25f;
         C[9] = 0;
-        C[10] = 0.1f;
+        C[10] = 0.25f;
         C[11] = 0.25f;
         C[12] = 10;
         C[13] = 0.25f;
@@ -127,7 +127,12 @@ public class Player : MonoBehaviour
             RaycastHit2D hit = Physics2D.GetRayIntersection(ray, Mathf.Infinity);
 
             if (hit.collider != null && hit.collider.transform.gameObject == opponent)
-                Enqueue(5);
+            {
+                if (character == 0)
+                    Enqueue(5);
+                else
+                    Enqueue(10);
+            }
             else
                 Enqueue(0);
         }
@@ -235,19 +240,22 @@ public class Player : MonoBehaviour
         }
         else
             skills[4].gameObject.SetActive(false);
-       
-        if (connected && a && Vector2.Distance(transform.position, opponent.transform.position) <= 5.25f) //a
+
+        if (connected  && a && Vector2.Distance(transform.position, opponent.transform.position) <= 5.25f) //a
         {
-            a = false;
-            Cool[5] = 1.6f;
-            casting = C[5];
-            byte[] msg = new byte[5];
-            msg[0] = 105;
-            float[] t = new float[1];
-            t[0] = Time.time;
-            Buffer.BlockCopy(t, 0, msg, 1, 4);
-            udp.Send(msg, 5);
-            Invoke("traceA", 0.25f);
+            D[0] = Vector2.zero;
+            if (Cool[5] <= 0)
+            {
+                Debug.Log(Cool[5]);
+                Cool[5] = 1.6f;
+                byte[] msg = new byte[5];
+                msg[0] = 25;
+                float[] t = new float[1];
+                t[0] = Time.time;
+                Buffer.BlockCopy(t, 0, msg, 1, 4);
+                udp.Send(msg, 5);
+                Invoke("traceA", 0.25f);
+            }
         }
         else if (a)
         {
@@ -259,11 +267,11 @@ public class Player : MonoBehaviour
      
         if (connected && q && Vector2.Distance(transform.position, opponent.transform.position) <= 7) //q
         {
+            r = 2;
             q = false;
-            Cool[6] = W[6];
-            casting = C[6];
+            D[0] = Vector2.zero;
             byte[] msg = new byte[5];
-            msg[0] = 106;
+            msg[0] = 26;
             float[] t = new float[1];
             t[0] = Time.time;
             Buffer.BlockCopy(t, 0, msg, 1, 4);
@@ -305,16 +313,18 @@ public class Player : MonoBehaviour
 
         if (connected && a2 && Vector2.Distance(transform.position, opponent.transform.position) <= 5.25f) //a2
         {
-            a2 = false;
-            Cool[10] = 1.6f;
-            casting = C[10];
-            byte[] msg = new byte[5];
-            msg[0] = 110;
-            float[] t = new float[1];
-            t[0] = Time.time;
-            Buffer.BlockCopy(t, 0, msg, 1, 4);
-            udp.Send(msg, 5);
-            Invoke("traceA2", 0.25f);
+            D[0] = Vector2.zero;
+            if (Cool[10] <= 0)
+            {
+                Cool[10] = 1.6f;
+                byte[] msg = new byte[5];
+                msg[0] = 30;
+                float[] t = new float[1];
+                t[0] = Time.time;
+                Buffer.BlockCopy(t, 0, msg, 1, 4);
+                udp.Send(msg, 5);
+                Invoke("traceA2", 0.25f);
+            }
         }
         else if (a2)
         {
@@ -327,22 +337,22 @@ public class Player : MonoBehaviour
         if (connected && rq && Vector2.Distance(transform.position, opponent.transform.position) <= 7) //rq
         {
             rq = false;
-            Cool[11] = W[11];
-            casting = C[11];
-            byte[] msg = new byte[5];
-            msg[0] = 111;
-            float[] t = new float[1];
-            t[0] = Time.time;
-            Buffer.BlockCopy(t, 0, msg, 1, 4);
-            udp.Send(msg, 5);
+            D[0] = Vector2.zero;
+                byte[] msg = new byte[5];
+                msg[0] = 31;
+                float[] t = new float[1];
+                t[0] = Time.time;
+                Buffer.BlockCopy(t, 0, msg, 1, 4);
+                udp.Send(msg, 5);
             Invoke("trace12", 0.25f);
+            
         }
         else if (rq)
         {
             S[11] = transform.position;
             D[11] = (temp = opponent.transform.position) - S[11];
             R[11] = D[11] / D[11].magnitude;
-            transform.position = new Vector2(S[11].x + R[11].x * Time.deltaTime * V[0], S[11].y + R[11].y * Time.deltaTime * V[11]);
+            transform.position = new Vector2(S[11].x + R[11].x * Time.deltaTime * V[0], S[11].y + R[11].y * Time.deltaTime * V[0]);
         }
 
         if (connected && Time.time - T[12] <= Math.Min(D[12].magnitude, 6) / V[12]) //Lv rw
@@ -393,6 +403,33 @@ public class Player : MonoBehaviour
         udp.Connect(new IPEndPoint(IP.Address, 11449));
         connected = true;
     }
+    void OnTriggerEnter2D(Collider2D col)
+    {
+        byte[] x = new byte[1];
+        switch (col.tag)
+        {
+            case "et6":
+                x[0] = 56;
+                udp.Send(x, 1);
+                col.gameObject.SetActive(false);
+                break;
+            case "et11":
+                x[0] = 61;
+                udp.Send(x, 1);
+                col.gameObject.SetActive(false);
+                break;
+            case "ea":
+                x[0] = 55;
+                udp.Send(x, 1);
+                col.gameObject.SetActive(false);
+                break;
+            case "ea2":
+                x[0] = 60;
+                udp.Send(x, 1);
+                col.gameObject.SetActive(false);
+                break;
+        }
+    }
     void Move(int x)
     {
         S[x] = transform.position;
@@ -412,6 +449,10 @@ public class Player : MonoBehaviour
         if (Cool[x] >= 0)
             switch (x)
             {
+                case 5:
+                    q = rq =a2 = false;
+                    a = true;
+                    break;
                 case 7:
                     if (Cool[14] > 0 && Cool[14] <= 4)
                     {
@@ -432,11 +473,18 @@ public class Player : MonoBehaviour
                         udp.Send(m, 1);
                     }
                     return;
+                case 10:
+                    q = rq = a= false;
+                    a2 = true;
+                    break;
                 default:
                     return;
             }
-        Cool[x] = W[x];
-        q = rq = a = a2 = false;
+        else
+        {
+            q = rq = a = a2 = false;
+            Cool[x] = W[x];
+        }
         switch (x)
         {
             case 0:
@@ -448,7 +496,6 @@ public class Player : MonoBehaviour
                 a = true;
                 break;
             case 6:
-                r = 2;
                 Cool[6] = -1;
                 q = true;
                 break;
@@ -468,7 +515,10 @@ public class Player : MonoBehaviour
                 if (r == 2)
                 {
                     Cool[9] = -1;
-                    rq = true;
+                    if (target)
+                        rq = true;
+                    else
+                        return;
                 }
                 break;
             case 10:

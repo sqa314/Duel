@@ -6,6 +6,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq.Expressions;
 
 public class Opponent : MonoBehaviour
 {
@@ -16,7 +17,12 @@ public class Opponent : MonoBehaviour
     public GameObject tracersA2;
     public GameObject tracers6;
     public GameObject tracers12;
-
+    public GameObject etracersA1;
+    public GameObject etracersA2;
+    public GameObject etracers6;
+    public GameObject etracers12;
+    public float timeDiff;
+    public float ping;
     public bool w, e, rw;
     public bool a, a2, q, rq;
     public bool target;
@@ -27,7 +33,6 @@ public class Opponent : MonoBehaviour
     public Transform[] skills;
     public Vector2[] S, E, D, R;
     public Vector2 temp;
-    public int character;
     public int r;
     byte x;
     public Queue<byte[]> task;
@@ -71,7 +76,6 @@ public class Opponent : MonoBehaviour
         connected = false;
         flashable = true;
         e = false;
-        character = 5;
         r = 0;
         V[0] = 3.25f;
         V[1] = 20;
@@ -98,12 +102,10 @@ public class Opponent : MonoBehaviour
         C[2] = 0.25f;
         C[3] = 0.25f;
         C[4] = 1;
-        C[5] = 0.1f;
         C[6] = 0.25f;
         C[7] = 10;
         C[8] = 0.25f;
         C[9] = 0;
-        C[10] = 0.1f;
         C[11] = 0.25f;
         C[12] = 10;
         C[13] = 0.25f;
@@ -121,6 +123,8 @@ public class Opponent : MonoBehaviour
 
     void Update()
     {
+        ping = Master.ping;
+        timeDiff = Master.timeDiff;
         if (connected && Input.GetKeyDown(KeyCode.X))
         {
             flashable = true;
@@ -133,7 +137,9 @@ public class Opponent : MonoBehaviour
         {
             msg = task.Dequeue();
             x = msg[0];
-            switch(x)
+            a = a2 = q = rq = false;
+            target = false;
+            switch (x)
             {
                 case 3:
                     e = true;
@@ -142,59 +148,98 @@ public class Opponent : MonoBehaviour
                     a = true;
                     break;
                 case 6:
-                    r = 2;
                     q = true;
                     break;
                 case 7:
-                    r = 3;
                     if (Cool[14] > 0 && Cool[14] <= 4)
                     {
                         Cool[14] = 0;
                         transform.position = S[7];
-                        return;
+                        continue;
                     }
-                    break;
-                case 8:
-                    r = 4;
                     break;
                 case 9:
-                    if (r == 0)
-                    {
-                        return;
-                    }
                     if (Cool[15] > 0 && Cool[15] <= 4)
                     {
                         Cool[15] = 0;
                         transform.position = S[12];
-                        return;
+                        continue;
                     }
-                    x += (byte)r;
-                    if (r == 2)
-                        rq = true;
                     break;
                 case 10:
-                    a2= true;
+                    a2 = true;
                     break;
-                case 105:
-                    Invoke("traceA", 0.25f);
+                case 11:
+                    rq = true;
                     break;
-                case 106:
-                    Invoke("trace6", 0.25f);
+                case 25:
+                    Invoke("traceA", 0.25f-ping);
+                    target = true;
                     break;
-                case 110:
-                    Invoke("traceA2", 0.25f);
+                case 26:
+                    Invoke("trace6", 0.25f-ping);
+                    target = true;
                     break;
-                case 111:
-                    Invoke("trace12", 0.25f);
+                case 30:
+                    Debug.Log("e" + Time.time.ToString());
+                    Invoke("traceA2", 0.25f-ping);
+                    target = true;
                     break;
+                case 31:
+                    Invoke("trace12", 0.25f-ping);
+                    target = true;
+                    break;
+                case 55:
+                    etracersA1.SetActive(false);
+                    continue;
+                case 56:
+                    etracers6.SetActive(false);
+                    continue;
+                case 60:
+                    etracersA2.SetActive(false);
+                    continue;
+                case 61:
+                    etracers12.SetActive(false);
+                    continue;
             }
-           S[x] = new Vector2(-BitConverter.ToSingle(msg, 1), -BitConverter.ToSingle(msg, 5));
-           E[x] = new Vector2(-BitConverter.ToSingle(msg, 9), -BitConverter.ToSingle(msg, 13));
-               T[x] = BitConverter.ToSingle(msg, 17);
-               D[0] = Vector2.zero;
+            if (!target)
+            {
+                S[x] = new Vector2(-BitConverter.ToSingle(msg, 1), -BitConverter.ToSingle(msg, 5));
+                E[x] = new Vector2(-BitConverter.ToSingle(msg, 9), -BitConverter.ToSingle(msg, 13));
+                T[x] = BitConverter.ToSingle(msg, 17);
+            }
+            else
+                T[x-=20] = BitConverter.ToSingle(msg, 1)+timeDiff+ping;
+            D[0] = Vector2.zero;
             casting = C[x];
             D[x] = E[x] - S[x];
             R[x] = D[x] / D[x].magnitude;
+        }
+        if (task.Count != 0)
+        {
+            switch (task.Peek()[0])
+            {
+                case 25:
+                    Invoke("traceA", 0.25f-ping);
+                    task.Dequeue();
+                    target = true;
+                    break;
+                case 26:
+                    Invoke("trace6", 0.25f-ping);
+                    task.Dequeue();
+                    target = true;
+                    break;
+                case 30:
+                    Invoke("traceA2", 0.25f-ping);
+                    task.Dequeue();
+                    target = true;
+                    break;
+                case 31:
+                    Invoke("trace12", 0.25f-ping);
+                    task.Dequeue();
+                    target = true;
+                    break;
+            }
         }
         if (connected && Time.time - T[0] <= D[0].magnitude / V[0]) //move
             transform.position = new Vector2(S[0].x + R[0].x * (Time.time - T[0]) * V[0], S[0].y + R[0].y * (Time.time - T[0]) * V[0]);
@@ -236,11 +281,8 @@ public class Opponent : MonoBehaviour
         else
             skills[4].gameObject.SetActive(false);
 
-        if (connected && a && Vector2.Distance(transform.position, opponent.transform.position) <= 5.25f) //a
-        {
+        if (connected && Cool[5] <= 0 && a && Vector2.Distance(transform.position, opponent.transform.position) <= 5.25f) //a
             a = false;
-            casting = C[5];
-        }
         else if (a)
         {
             S[5] = transform.position;
@@ -250,10 +292,7 @@ public class Opponent : MonoBehaviour
         }
 
         if (connected && q && Vector2.Distance(transform.position, opponent.transform.position) <= 7) //q
-        {
             q = false;
-            casting = C[6];
-        }
         else if (q)
         {
             S[6] = transform.position;
@@ -287,11 +326,8 @@ public class Opponent : MonoBehaviour
         else
             skills[8].gameObject.SetActive(false);
 
-        if (connected && a2 && Vector2.Distance(transform.position, opponent.transform.position) <= 5.25f) //a2
-        {
+        if (connected && Cool[10] <= 0 && a2 && Vector2.Distance(transform.position, opponent.transform.position) <= 5.25f) //a2
             a2 = false;
-            casting = C[10];
-        }
         else if (a2)
         {
             S[10] = transform.position;
@@ -301,16 +337,13 @@ public class Opponent : MonoBehaviour
         }
 
         if (connected && rq && Vector2.Distance(transform.position, opponent.transform.position) <= 7) //rq
-        {
             rq = false;
-            casting = C[11];
-        }
         else if (rq)
         {
             S[11] = transform.position;
             D[11] = (temp = opponent.transform.position) - S[11];
             R[11] = D[11] / D[11].magnitude;
-            transform.position = new Vector2(S[11].x + R[11].x * Time.deltaTime * V[0], S[11].y + R[11].y * Time.deltaTime * V[11]);
+            transform.position = new Vector2(S[11].x + R[11].x * Time.deltaTime * V[0], S[11].y + R[11].y * Time.deltaTime * V[0]);
         }
 
         if (connected && Time.time - T[12] <= Math.Min(D[12].magnitude, 6) / V[12]) //Lv rw
@@ -358,8 +391,6 @@ public class Opponent : MonoBehaviour
     void Receive()
     {
         while (true)
-        {
             task.Enqueue(udp.Receive(ref IP));
-        }
     }
 }
